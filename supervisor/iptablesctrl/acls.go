@@ -12,6 +12,27 @@ import (
 	"github.com/aporeto-inc/trireme/policy"
 )
 
+func (i *Instance) ELBChainRules(hostip string, port string) [][]string {
+	hostport := hostip + ":" + port
+	str := [][]string{
+		{
+			i.elbPacketIPTableContext,
+			ipTableSectionOutput,
+			"-s", hostip,
+			"-j", "RETURN",
+		},
+		{
+			i.elbPacketIPTableContext,
+			ipTableSectionOutput,
+			"-p", "tcp",
+			"-m", "set", "--match-set",
+			ELBIPSet, "dst",
+			"-j", "DNAT", "--to-destination",
+			hostport,
+		},
+	}
+	return str
+}
 func (i *Instance) cgroupChainRules(appChain string, netChain string, mark string, port string) [][]string {
 
 	str := [][]string{
@@ -666,6 +687,26 @@ func (i *Instance) setGlobalRules(appChain, netChain string) error {
 		return fmt.Errorf("Failed to add default allow for marked packets at net")
 	}
 
+	//Add an ELB rule for input and output to skip the processing
+	err = i.ipt.Insert(i.appAckPacketIPTableContext,
+		ipTableSectionInput,
+		1,
+		"-m", "set",
+		"--match-set", ELBIPSet, "src",
+		"-j", "RETURN")
+	if err != nil {
+		zap.L().Error("ERROR", zap.Error(err))
+	}
+	err = i.ipt.Insert(i.appAckPacketIPTableContext,
+		ipTableSectionOutput,
+		1,
+		"-m", "set",
+		"--match-set", ELBIPSet, "dst",
+		"-j", "RETURN")
+	if err != nil {
+		zap.L().Error("ERROR", zap.Error(err))
+	}
+	i.processRulesFromList(i.ELBChainRules("169.1.2.2", "5000"), "Append")
 	return nil
 
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/aporeto-inc/trireme/enforcer/utils/fqconfig"
 	"github.com/aporeto-inc/trireme/monitor/linuxmonitor/cgnetcls"
 	"github.com/aporeto-inc/trireme/policy"
+	"github.com/bvandewalle/go-ipset/ipset"
 
 	"github.com/aporeto-inc/trireme/supervisor/provider"
 )
@@ -19,10 +20,13 @@ const (
 	appChainPrefix            = chainPrefix + "App-"
 	netChainPrefix            = chainPrefix + "Net-"
 	targetNetworkSet          = "TargetNetSet"
+	ELBIPSet                  = "ELBIPs"
 	ipTableSectionOutput      = "OUTPUT"
 	ipTableSectionInput       = "INPUT"
 	ipTableSectionPreRouting  = "PREROUTING"
 	ipTableSectionPostRouting = "POSTROUTING"
+	outputELBChain            = "ELB-App"
+	inputELBChain             = "ELB-Net"
 )
 
 // Instance  is the structure holding all information about a implementation
@@ -38,6 +42,7 @@ type Instance struct {
 	netPacketIPTableSection    string
 	appCgroupIPTableSection    string
 	appSynAckIPTableSection    string
+	elbPacketIPTableContext    string
 	mode                       constants.ModeType
 }
 
@@ -61,6 +66,7 @@ func NewInstance(fqc *fqconfig.FilterQueue, mode constants.ModeType) (*Instance,
 		appPacketIPTableContext:    "raw",
 		appAckPacketIPTableContext: "mangle",
 		netPacketIPTableContext:    "mangle",
+		elbPacketIPTableContext:    "nat",
 		mode: mode,
 	}
 
@@ -312,7 +318,7 @@ func (i *Instance) SetTargetNetworks(current, networks []string) error {
 	if err := i.createTargetSet(networks); err != nil {
 		return err
 	}
-
+	i.ipset.NewIpset(ELBIPSet, "hash:net", &ipset.Params{})
 	// Insert the ACLS that point to the target networks
 	if err := i.setGlobalRules(i.appPacketIPTableSection, i.netPacketIPTableSection); err != nil {
 		return fmt.Errorf("Failed to update synack networks")
