@@ -66,6 +66,10 @@ func SystemdRPCMetadataExtractor(event *rpcmonitor.EventInfo) (*policy.PURuntime
 		options[cgnetcls.PortTag] = ports
 	}
 
+	user, ok := runtimeTags.Get("@usr:originaluser")
+	if ok {
+		options["USER"] = user
+	}
 	options[cgnetcls.CgroupMarkTag] = strconv.FormatUint(cgnetcls.MarkVal(), 10)
 
 	runtimeIps := policy.ExtendedMap{"bridge": "0.0.0.0/0"}
@@ -76,7 +80,7 @@ func SystemdRPCMetadataExtractor(event *rpcmonitor.EventInfo) (*policy.PURuntime
 		return nil, fmt.Errorf("PID is invalid: %s", err)
 	}
 
-	return policy.NewPURuntime(event.Name, runtimePID, runtimeTags, runtimeIps, constants.LinuxProcessPU, options), nil
+	return policy.NewPURuntime(event.Name, runtimePID, "", runtimeTags, runtimeIps, constants.LinuxProcessPU, options), nil
 }
 
 // ComputeMd5 computes the Md5 of a file

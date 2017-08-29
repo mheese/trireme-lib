@@ -20,6 +20,8 @@ import (
 	"github.com/aporeto-inc/trireme/policy"
 )
 
+var contextStorePath = "/var/run/trireme"
+
 // RPCMetadataExtractor is a function used to extract a *policy.PURuntime from a given
 // EventInfo.
 type RPCMetadataExtractor func(*EventInfo) (*policy.PURuntime, error)
@@ -62,7 +64,7 @@ func NewRPCMonitor(rpcAddress string, collector collector.EventCollector) (*RPCM
 	r := &RPCMonitor{
 		rpcAddress:    rpcAddress,
 		monitorServer: monitorServer,
-		contextstore:  contextstore.NewContextStore(),
+		contextstore:  contextstore.NewContextStore(contextStorePath),
 		collector:     collector,
 	}
 
@@ -104,7 +106,7 @@ func (r *RPCMonitor) reSync() error {
 
 	//This is create to only delete if required don't create groups using this handle here
 	cgnetclshandle := cgnetcls.NewCgroupNetController("")
-	cstorehandle := contextstore.NewContextStore()
+	cstorehandle := contextstore.NewContextStore(contextStorePath)
 
 	for {
 		contextID := <-walker
@@ -244,7 +246,7 @@ func (s *Server) HandleEvent(eventInfo *EventInfo, result *RPCResponse) error {
 		if present {
 			if err := f(eventInfo); err != nil {
 				result.Error = err.Error()
-				return fmt.Errorf("Error")
+				return err
 			}
 			return nil
 		}
@@ -278,5 +280,5 @@ func DefaultRPCMetadataExtractor(event *EventInfo) (*policy.PURuntime, error) {
 		return nil, fmt.Errorf("PID is invalid: %s", err)
 	}
 
-	return policy.NewPURuntime(event.Name, runtimePID, runtimeTags, runtimeIps, constants.ContainerPU, nil), nil
+	return policy.NewPURuntime(event.Name, runtimePID, "", runtimeTags, runtimeIps, constants.ContainerPU, nil), nil
 }
