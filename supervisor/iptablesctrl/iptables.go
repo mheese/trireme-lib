@@ -318,7 +318,16 @@ func (i *Instance) SetTargetNetworks(current, networks []string) error {
 	if err := i.createTargetSet(networks); err != nil {
 		return err
 	}
-	i.ipset.NewIpset(ELBIPSet, "hash:net", &ipset.Params{})
+	ips, ipserr := i.ipset.NewIpset(ELBIPSet, "hash:ip", &ipset.Params{})
+	if ipserr != nil {
+		zap.L().Error("creating elb ipset", zap.Error(ipserr))
+	}
+	ipserr = ips.Add("172.17.0.2", 0)
+	ipserr = ips.Add("172.17.0.3", 0)
+	zap.L().Error("Added 172.17.0.2")
+	if ipserr != nil {
+		zap.L().Error("Adding IP to elb ipset", zap.Error(ipserr))
+	}
 	// Insert the ACLS that point to the target networks
 	if err := i.setGlobalRules(i.appPacketIPTableSection, i.netPacketIPTableSection); err != nil {
 		return fmt.Errorf("Failed to update synack networks")
