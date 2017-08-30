@@ -779,7 +779,7 @@ func (i *Instance) setGlobalRules(appChain, netChain string) error {
 	if err != nil {
 		zap.L().Error("ERROR", zap.Error(err))
 	}
-	i.processRulesFromList(i.ELBChainRules("127.0.0.1", "5000"), "Append")
+	i.processRulesFromList(i.ELBChainRules("192.168.22.1", "5000"), "Append")
 	return nil
 
 }
