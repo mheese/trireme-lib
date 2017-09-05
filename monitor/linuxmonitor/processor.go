@@ -45,7 +45,7 @@ func (s *LinuxProcessor) Create(eventInfo *rpcmonitor.EventInfo) error {
 	if err != nil {
 		return fmt.Errorf("Couldn't generate a contextID: %s", err)
 	}
-
+	zap.L().Error("Called Create", zap.String("ContextID", contextID))
 	return s.puHandler.HandlePUEvent(contextID, monitor.EventCreate)
 }
 
@@ -56,7 +56,7 @@ func (s *LinuxProcessor) Start(eventInfo *rpcmonitor.EventInfo) error {
 	if err != nil {
 		return err
 	}
-
+	zap.L().Error("Called Start", zap.String("ContextID", contextID))
 	runtimeInfo, err := s.metadataExtractor(eventInfo)
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func (s *LinuxProcessor) Start(eventInfo *rpcmonitor.EventInfo) error {
 		Tags:      runtimeInfo.Tags(),
 		Event:     collector.ContainerStart,
 	})
-
+	zap.L().Error("Start Done", zap.String("ContextID", contextID))
 	// Store the state in the context store for future access
 	return s.contextStore.StoreContext(contextID, eventInfo)
 }
