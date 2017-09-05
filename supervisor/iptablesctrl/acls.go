@@ -14,7 +14,6 @@ import (
 )
 
 func (i *Instance) ELBChainRules(hostip string, port string) [][]string {
-	hostport := hostip + ":" + port
 	str := [][]string{
 		{
 			i.elbPacketIPTableContext,
@@ -28,8 +27,8 @@ func (i *Instance) ELBChainRules(hostip string, port string) [][]string {
 			"-p", "tcp",
 			"-m", "set", "--match-set",
 			ELBIPSet, "dst",
-			"-j", "DNAT", "--to-destination",
-			hostport,
+			"-j", "REDIRECT", "--to-port",
+			port,
 		},
 	}
 	return str

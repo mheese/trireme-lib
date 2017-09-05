@@ -133,7 +133,7 @@ func New(
 	}
 
 	d.nflogger = newNFLogger(11, 10, d.puInfoDelegate, collector)
-	proxy := NewProxy("127.0.0.1:5000", true, false)
+	proxy := NewProxy(":5000", true, false)
 	go proxy.Start()
 	return d
 }
