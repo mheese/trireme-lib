@@ -23,10 +23,19 @@ func (i *Instance) ELBChainRules(hostip string, port string) [][]string {
 		},
 		{
 			i.elbPacketIPTableContext,
-			ipTableSectionOutput,
+			ipTableSectionInput,
 			"-p", "tcp",
 			"-m", "set", "--match-set",
 			ELBIPSet, "dst",
+			"-j", "REDIRECT", "--to-port",
+			port,
+		},
+		{
+			i.elbPacketIPTableContext,
+			ipTableSectionOutput,
+			"-p", "tcp",
+			"-m", "set", "--match-set",
+			ELBIPSet, "src",
 			"-j", "REDIRECT", "--to-port",
 			port,
 		},
@@ -778,6 +787,8 @@ func (i *Instance) setGlobalRules(appChain, netChain string) error {
 	if err != nil {
 		zap.L().Error("ERROR", zap.Error(err))
 	}
+	i.ipt.NewChain(i.elbPacketIPTableContext, i.ELBInputChain)
+	i.ipt.NewChain(i.elbPacketIPTableContext, i.ELBOutputChain)
 	i.processRulesFromList(i.ELBChainRules("192.168.22.1", "5000"), "Append")
 	return nil
 
