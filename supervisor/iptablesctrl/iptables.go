@@ -21,13 +21,15 @@ const (
 	appChainPrefix            = chainPrefix + "App-"
 	netChainPrefix            = chainPrefix + "Net-"
 	targetNetworkSet          = "TargetNetSet"
-	ELBIPSet                  = "ELBIPs"
+	ELBIPSetVIP               = "ELBIPs-VIPs"
+	ELBIPSetPIP               = "ELBIPs-PIPs"
 	ipTableSectionOutput      = "OUTPUT"
 	ipTableSectionInput       = "INPUT"
 	ipTableSectionPreRouting  = "PREROUTING"
 	ipTableSectionPostRouting = "POSTROUTING"
 	outputELBChain            = "ELB-App"
 	inputELBChain             = "ELB-Net"
+	proxyport                 = "5000"
 )
 
 // Instance  is the structure holding all information about a implementation
@@ -331,23 +333,26 @@ func (i *Instance) SetTargetNetworks(current, networks []string) error {
 	if err := i.createTargetSet(networks); err != nil {
 		return err
 	}
-	ips, ipserr := i.ipset.NewIpset(ELBIPSet, "hash:ip", &ipset.Params{})
+	ips, ipserr := i.ipset.NewIpset(ELBIPSetVIP, "hash:ip", &ipset.Params{})
 	if ipserr != nil {
 		zap.L().Error("creating elb ipset", zap.Error(ipserr))
 	}
+
 	ipserr = ips.Add("172.17.0.2", 0)
 	ipserr = ips.Add("172.17.0.3", 0)
 	zap.L().Error("Added 172.17.0.2")
+	_, ipserr = i.ipset.NewIpset(ELBIPSetPIP, "hash:ip", &ipset.Params{})
 	if ipserr != nil {
-		zap.L().Error("Adding IP to elb ipset", zap.Error(ipserr))
+		zap.L().Error("creating elb ipset", zap.Error(ipserr))
 	}
+	i.ipt.NewChain(i.appAckPacketIPTableContext, outputELBChain)
+	i.ipt.NewChain(i.appAckPacketIPTableContext, inputELBChain)
+	i.ipt.NewChain(i.appAckPacketIPTableContext, uidchain)
 	// Insert the ACLS that point to the target networks
 	if err := i.setGlobalRules(i.appPacketIPTableSection, i.netPacketIPTableSection); err != nil {
 		return fmt.Errorf("Failed to update synack networks")
 	}
 
-	i.ipt.NewChain(i.appAckPacketIPTableContext, uidchain)
-	i.ipt.Insert(i.appAckPacketIPTableContext, i.appPacketIPTableSection, 1, "-j", uidchain)
 	//	i.ipt.Insert(i.appAckPacketIPTableContext, uidchain, 1, "-j", "RETURN")
 	return nil
 }

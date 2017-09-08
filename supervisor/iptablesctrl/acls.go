@@ -17,27 +17,27 @@ func (i *Instance) ELBChainRules(hostip string, port string) [][]string {
 	str := [][]string{
 		{
 			i.elbPacketIPTableContext,
-			ipTableSectionOutput,
-			"-s", hostip,
+			inputELBChain + "-redir",
+			"-p", "tcp",
+			"--dport", proxyport,
 			"-j", "RETURN",
 		},
 		{
 			i.elbPacketIPTableContext,
-			ipTableSectionInput,
+			outputELBChain + "-redir",
 			"-p", "tcp",
-			"-m", "set", "--match-set",
-			ELBIPSet, "dst",
-			"-j", "REDIRECT", "--to-port",
-			port,
+			"--sport", proxyport,
+			"-j", "RETURN",
 		},
+
 		{
 			i.elbPacketIPTableContext,
-			ipTableSectionOutput,
+			inputELBChain + "-redir",
 			"-p", "tcp",
 			"-m", "set", "--match-set",
-			ELBIPSet, "src",
+			ELBIPSetPIP, "dst",
 			"-j", "REDIRECT", "--to-port",
-			port,
+			proxyport,
 		},
 	}
 	return str
@@ -46,6 +46,44 @@ func (i *Instance) ELBChainRules(hostip string, port string) [][]string {
 func (i *Instance) cgroupChainRules(appChain string, netChain string, mark string, port string, uid string) [][]string {
 
 	str := [][]string{
+		{
+			i.appAckPacketIPTableContext,
+			outputELBChain,
+			"-m", "cgroup",
+			"--cgroup", mark,
+			"-m", "set",
+			"--match-set", ELBIPSetVIP, "dst",
+			"-j", "RETURN",
+		},
+		{
+			i.appAckPacketIPTableContext,
+			inputELBChain,
+			"-m", "cgroup",
+			"--cgroup", mark,
+			"-m", "set",
+			"--match-set", ELBIPSetPIP, "src",
+			"-j", "RETURN",
+		},
+		{
+			i.elbPacketIPTableContext,
+			outputELBChain + "-redir",
+			"-p", "tcp",
+			"-m", "cgroup", "--cgroup", mark,
+			"-m", "set", "--match-set",
+			ELBIPSetVIP, "src",
+			"-j", "CONNMARK",
+			"--set-mark", mark,
+		},
+		{
+			i.elbPacketIPTableContext,
+			outputELBChain + "-redir",
+			"-p", "tcp",
+			"-m", "cgroup", "--cgroup", mark,
+			"-m", "set", "--match-set",
+			ELBIPSetVIP, "src",
+			"-j", "REDIRECT", "--to-port",
+			proxyport,
+		},
 		{
 			i.appAckPacketIPTableContext,
 			i.appCgroupIPTableSection,
@@ -767,28 +805,34 @@ func (i *Instance) setGlobalRules(appChain, netChain string) error {
 	if err != nil {
 		return fmt.Errorf("Failed to add default allow for marked packets at net")
 	}
-
+	err = i.ipt.Insert(i.appAckPacketIPTableContext,
+		i.appPacketIPTableSection,
+		1,
+		"-j", uidchain)
+	if err != nil {
+		zap.L().Error("ERROR", zap.Error(err))
+	}
 	//Add an ELB rule for input and output to skip the processing
 	err = i.ipt.Insert(i.appAckPacketIPTableContext,
 		ipTableSectionInput,
 		1,
-		"-m", "set",
-		"--match-set", ELBIPSet, "src",
-		"-j", "RETURN")
+		// "-m", "set",
+		// "--match-set", ELBIPSetPIP, "src",
+		"-j", inputELBChain)
 	if err != nil {
 		zap.L().Error("ERROR", zap.Error(err))
 	}
 	err = i.ipt.Insert(i.appAckPacketIPTableContext,
 		ipTableSectionOutput,
 		1,
-		"-m", "set",
-		"--match-set", ELBIPSet, "dst",
-		"-j", "RETURN")
+		// "-m", "set",
+		// "--match-set", ELBIPSetVIP, "dst",
+		"-j", outputELBChain)
 	if err != nil {
 		zap.L().Error("ERROR", zap.Error(err))
 	}
-	i.ipt.NewChain(i.elbPacketIPTableContext, i.ELBInputChain)
-	i.ipt.NewChain(i.elbPacketIPTableContext, i.ELBOutputChain)
+	i.ipt.NewChain(i.elbPacketIPTableContext, inputELBChain+"-redir")
+	i.ipt.NewChain(i.elbPacketIPTableContext, outputELBChain+"-redir")
 	i.processRulesFromList(i.ELBChainRules("192.168.22.1", "5000"), "Append")
 	return nil
 
