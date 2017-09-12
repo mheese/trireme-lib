@@ -20,16 +20,34 @@ func (i *Instance) ELBChainRules(hostip string, port string) [][]string {
 			inputELBChain + "-redir",
 			"-p", "tcp",
 			"--dport", proxyport,
-			"-j", "RETURN",
+			"-j", "ACCEPT",
+		},
+		{
+			i.elbPacketIPTableContext,
+			ipTableSectionOutput,
+			"-j", outputELBChain + "-redir",
+		},
+		{
+			i.elbPacketIPTableContext,
+			ipTableSectionPreRouting,
+			"-j", inputELBChain + "-redir",
 		},
 		{
 			i.elbPacketIPTableContext,
 			outputELBChain + "-redir",
 			"-p", "tcp",
-			"--sport", proxyport,
-			"-j", "RETURN",
+			"-m", "mark",
+			"--mark", proxyMark,
+			"-j", "ACCEPT",
 		},
-
+		{
+			i.elbPacketIPTableContext,
+			inputELBChain + "-redir",
+			"-p", "tcp",
+			"-m", "mark",
+			"--mark", proxyMark,
+			"-j", "ACCEPT",
+		},
 		{
 			i.elbPacketIPTableContext,
 			inputELBChain + "-redir",
@@ -44,7 +62,9 @@ func (i *Instance) ELBChainRules(hostip string, port string) [][]string {
 }
 
 func (i *Instance) cgroupChainRules(appChain string, netChain string, mark string, port string, uid string) [][]string {
-
+	connmark, _ := strconv.Atoi(mark)
+	connmark = connmark | (1 << 20)
+	strconnmark := strconv.Itoa(connmark)
 	str := [][]string{
 		{
 			i.appAckPacketIPTableContext,
@@ -53,16 +73,45 @@ func (i *Instance) cgroupChainRules(appChain string, netChain string, mark strin
 			"--cgroup", mark,
 			"-m", "set",
 			"--match-set", ELBIPSetVIP, "dst",
-			"-j", "RETURN",
+			"-j", "ACCEPT",
+		},
+		{
+			i.appAckPacketIPTableContext,
+			outputELBChain,
+			"-m", "connmark",
+			"--mark", strconnmark,
+			"-m", "comment", "--comment", "capture SYN ACK ",
+			"-m", "set",
+			"--match-set", ELBIPSetVIP, "dst",
+			"-j", "ACCEPT",
 		},
 		{
 			i.appAckPacketIPTableContext,
 			inputELBChain,
-			"-m", "cgroup",
-			"--cgroup", mark,
 			"-m", "set",
 			"--match-set", ELBIPSetPIP, "src",
-			"-j", "RETURN",
+			"-j", "ACCEPT",
+		},
+		{
+			i.elbPacketIPTableContext,
+			outputELBChain + "-redir",
+			"-p", "tcp",
+			"-m", "set", "--match-set",
+			ELBIPSetVIP, "dst",
+			"-m", "connmark",
+			"--mark", strconnmark,
+			"-m", "comment", "--comment", "SYN ACK for proxy",
+			"-j", "REDIRECT",
+			"--to-port", proxyport,
+		},
+		{
+			i.elbPacketIPTableContext,
+			inputELBChain + "-redir",
+			"-p", "tcp",
+			"-m", "set",
+			"--match-set", ELBIPSetPIP, "src",
+			"-j", "REDIRECT",
+			"--to-port", proxyport,
 		},
 		{
 			i.elbPacketIPTableContext,
@@ -70,9 +119,9 @@ func (i *Instance) cgroupChainRules(appChain string, netChain string, mark strin
 			"-p", "tcp",
 			"-m", "cgroup", "--cgroup", mark,
 			"-m", "set", "--match-set",
-			ELBIPSetVIP, "src",
+			ELBIPSetVIP, "dst",
 			"-j", "CONNMARK",
-			"--set-mark", mark,
+			"--set-mark", strconnmark,
 		},
 		{
 			i.elbPacketIPTableContext,
@@ -80,7 +129,7 @@ func (i *Instance) cgroupChainRules(appChain string, netChain string, mark strin
 			"-p", "tcp",
 			"-m", "cgroup", "--cgroup", mark,
 			"-m", "set", "--match-set",
-			ELBIPSetVIP, "src",
+			ELBIPSetVIP, "dst",
 			"-j", "REDIRECT", "--to-port",
 			proxyport,
 		},
@@ -775,6 +824,18 @@ func (i *Instance) setGlobalRules(appChain, netChain string) error {
 		return fmt.Errorf("Failed to add capture SynAck rule for table %s, chain %s, with error: %s", i.appAckPacketIPTableContext, i.appPacketIPTableSection, err.Error())
 	}
 
+	//Temporary Log Some packets
+	// err = i.ipt.Insert(
+	// 	i.appAckPacketIPTableContext,
+	// 	appChain, 1,
+	// 	"-m", "set", "--match-set", targetNetworkSet, "dst",
+	// 	"-p", "tcp", "--tcp-flags", "SYN,ACK", "SYN,ACK",
+	// 	"-j", "LOG")
+	// if err != nil {
+	// 	return fmt.Errorf("Failed to add capture SynAck rule for table %s, chain %s, with error: %s", i.appAckPacketIPTableContext, i.appPacketIPTableSection, err.Error())
+	// }
+
+	//Temporary Log Some packets
 	err = i.ipt.Insert(
 		i.netPacketIPTableContext,
 		netChain, 1,
@@ -831,6 +892,64 @@ func (i *Instance) setGlobalRules(appChain, netChain string) error {
 	if err != nil {
 		zap.L().Error("ERROR", zap.Error(err))
 	}
+	err = i.ipt.Insert(i.appAckPacketIPTableContext,
+		inputELBChain,
+		1,
+		"-m", "mark",
+		"--mark", proxyMark,
+		"-j", "ACCEPT")
+	if err != nil {
+		zap.L().Error("ERROR", zap.Error(err))
+	}
+
+	err = i.ipt.Insert(i.appAckPacketIPTableContext,
+		outputELBChain,
+		1,
+		"-m", "mark",
+		"--mark", proxyMark,
+		"-j", "ACCEPT")
+	if err != nil {
+		zap.L().Error("ERROR", zap.Error(err))
+	}
+
+	//Temporary Remove during cleanup
+	err = i.ipt.Insert(i.appAckPacketIPTableContext,
+		outputELBChain,
+		1,
+		"-p", "tcp",
+		"--sport", proxyport,
+		"-j", "ACCEPT")
+	if err != nil {
+		zap.L().Error("ERROR", zap.Error(err))
+	}
+	err = i.ipt.Insert(i.appAckPacketIPTableContext,
+		outputELBChain,
+		1,
+		"-p", "tcp",
+		"--dport", proxyport,
+		"-j", "ACCEPT")
+	if err != nil {
+		zap.L().Error("ERROR", zap.Error(err))
+	}
+	err = i.ipt.Insert(i.appAckPacketIPTableContext,
+		inputELBChain,
+		1,
+		"-p", "tcp",
+		"--sport", proxyport,
+		"-j", "ACCEPT")
+	if err != nil {
+		zap.L().Error("ERROR", zap.Error(err))
+	}
+	err = i.ipt.Insert(i.appAckPacketIPTableContext,
+		inputELBChain,
+		1,
+		"-p", "tcp",
+		"--dport", proxyport,
+		"-j", "ACCEPT")
+	if err != nil {
+		zap.L().Error("ERROR", zap.Error(err))
+	}
+	//Temporary remove during cleanup
 	i.ipt.NewChain(i.elbPacketIPTableContext, inputELBChain+"-redir")
 	i.ipt.NewChain(i.elbPacketIPTableContext, outputELBChain+"-redir")
 	i.processRulesFromList(i.ELBChainRules("192.168.22.1", "5000"), "Append")

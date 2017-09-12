@@ -30,6 +30,8 @@ const (
 	outputELBChain            = "ELB-App"
 	inputELBChain             = "ELB-Net"
 	proxyport                 = "5000"
+	proxyMark                 = "0x40"
+	proxyMarkInt              = 0x40
 )
 
 // Instance  is the structure holding all information about a implementation
@@ -338,13 +340,13 @@ func (i *Instance) SetTargetNetworks(current, networks []string) error {
 		zap.L().Error("creating elb ipset", zap.Error(ipserr))
 	}
 
-	ipserr = ips.Add("172.17.0.2", 0)
-	ipserr = ips.Add("172.17.0.3", 0)
-	zap.L().Error("Added 172.17.0.2")
-	_, ipserr = i.ipset.NewIpset(ELBIPSetPIP, "hash:ip", &ipset.Params{})
+	ipserr = ips.Add("192.168.33.10", 0)
+
+	ipspip, ipserr := i.ipset.NewIpset(ELBIPSetPIP, "hash:ip", &ipset.Params{})
 	if ipserr != nil {
 		zap.L().Error("creating elb ipset", zap.Error(ipserr))
 	}
+	ipspip.Add("127.0.0.1", 0)
 	i.ipt.NewChain(i.appAckPacketIPTableContext, outputELBChain)
 	i.ipt.NewChain(i.appAckPacketIPTableContext, inputELBChain)
 	i.ipt.NewChain(i.appAckPacketIPTableContext, uidchain)
