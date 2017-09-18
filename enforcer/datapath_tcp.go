@@ -14,6 +14,7 @@ import (
 	"github.com/aporeto-inc/trireme/constants"
 	"github.com/aporeto-inc/trireme/enforcer/utils/packet"
 	"github.com/aporeto-inc/trireme/enforcer/utils/tokens"
+	"github.com/aporeto-inc/trireme/log"
 	"github.com/aporeto-inc/trireme/monitor/linuxmonitor/cgnetcls"
 	"github.com/aporeto-inc/trireme/policy"
 )
@@ -21,16 +22,18 @@ import (
 // processNetworkPackets processes packets arriving from network and are destined to the application
 func (d *Datapath) processNetworkTCPPackets(p *packet.Packet) (err error) {
 
-	zap.L().Debug("Processing network packet ",
-		zap.String("flow", p.L4FlowHash()),
-		zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
-	)
+	if log.Trace {
+		zap.L().Debug("Processing network packet ",
+			zap.String("flow", p.L4FlowHash()),
+			zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
+		)
 
-	defer zap.L().Debug("Finished Processing network packet ",
-		zap.String("flow", p.L4FlowHash()),
-		zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
-		zap.Error(err),
-	)
+		defer zap.L().Debug("Finished Processing network packet ",
+			zap.String("flow", p.L4FlowHash()),
+			zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
+			zap.Error(err),
+		)
+	}
 
 	var context *PUContext
 	var conn *TCPConnection
@@ -41,11 +44,13 @@ func (d *Datapath) processNetworkTCPPackets(p *packet.Packet) (err error) {
 	case packet.TCPSynMask:
 		context, conn, err = d.netSynRetrieveState(p)
 		if err != nil {
-			zap.L().Debug("Packet rejected",
-				zap.String("flow", p.L4FlowHash()),
-				zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
-				zap.Error(err),
-			)
+			if log.Trace {
+				zap.L().Debug("Packet rejected",
+					zap.String("flow", p.L4FlowHash()),
+					zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
+					zap.Error(err),
+				)
+			}
 			return err
 		}
 
@@ -60,21 +65,25 @@ func (d *Datapath) processNetworkTCPPackets(p *packet.Packet) (err error) {
 	case packet.TCPSynAckMask:
 		context, conn, err = d.netSynAckRetrieveState(p)
 		if err != nil {
-			zap.L().Debug("SynAckPacket Ingored",
-				zap.String("flow", p.L4FlowHash()),
-				zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
-			)
+			if log.Trace {
+				zap.L().Debug("SynAckPacket Ingored",
+					zap.String("flow", p.L4FlowHash()),
+					zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
+				)
+			}
 			return nil
 		}
 
 	default:
 		context, conn, err = d.netRetrieveState(p)
 		if err != nil {
-			zap.L().Debug("Packet rejected",
-				zap.String("flow", p.L4FlowHash()),
-				zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
-				zap.Error(err),
-			)
+			if log.Trace {
+				zap.L().Debug("Packet rejected",
+					zap.String("flow", p.L4FlowHash()),
+					zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
+					zap.Error(err),
+				)
+			}
 			return err
 		}
 	}
@@ -97,11 +106,13 @@ func (d *Datapath) processNetworkTCPPackets(p *packet.Packet) (err error) {
 	action, claims, err := d.processNetworkTCPPacket(p, context, conn)
 	if err != nil {
 		p.Print(packet.PacketFailureAuth)
-		zap.L().Debug("Rejecting packet ",
-			zap.String("flow", p.L4FlowHash()),
-			zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
-			zap.Error(err),
-		)
+		if log.Trace {
+			zap.L().Debug("Rejecting packet ",
+				zap.String("flow", p.L4FlowHash()),
+				zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
+				zap.Error(err),
+			)
+		}
 		return fmt.Errorf("Packet processing failed for network packet: %s", err.Error())
 	}
 
@@ -130,16 +141,18 @@ func (d *Datapath) processNetworkTCPPackets(p *packet.Packet) (err error) {
 // processApplicationPackets processes packets arriving from an application and are destined to the network
 func (d *Datapath) processApplicationTCPPackets(p *packet.Packet) (err error) {
 
-	zap.L().Debug("Processing application packet ",
-		zap.String("flow", p.L4FlowHash()),
-		zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
-	)
+	if log.Trace {
+		zap.L().Debug("Processing application packet ",
+			zap.String("flow", p.L4FlowHash()),
+			zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
+		)
 
-	defer zap.L().Debug("Finished Processing application packet ",
-		zap.String("flow", p.L4FlowHash()),
-		zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
-		zap.Error(err),
-	)
+		defer zap.L().Debug("Finished Processing application packet ",
+			zap.String("flow", p.L4FlowHash()),
+			zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
+			zap.Error(err),
+		)
+	}
 
 	var context *PUContext
 	var conn *TCPConnection
@@ -148,20 +161,24 @@ func (d *Datapath) processApplicationTCPPackets(p *packet.Packet) (err error) {
 	case packet.TCPSynMask:
 		context, conn, err = d.appSynRetrieveState(p)
 		if err != nil {
-			zap.L().Debug("Packet rejected",
-				zap.String("flow", p.L4FlowHash()),
-				zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
-				zap.Error(err),
-			)
+			if log.Trace {
+				zap.L().Debug("Packet rejected",
+					zap.String("flow", p.L4FlowHash()),
+					zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
+					zap.Error(err),
+				)
+			}
 			return err
 		}
 	case packet.TCPSynAckMask:
 		context, conn, err = d.appRetrieveState(p)
 		if err != nil {
-			zap.L().Debug("SynAckPacket Ingored",
-				zap.String("flow", p.L4FlowHash()),
-				zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
-			)
+			if log.Trace {
+				zap.L().Debug("SynAckPacket Ignored",
+					zap.String("flow", p.L4FlowHash()),
+					zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
+				)
+			}
 
 			if p.Mark == strconv.Itoa(cgnetcls.Initialmarkval-1) {
 				//SYN ACK came through the global rule.
@@ -175,11 +192,13 @@ func (d *Datapath) processApplicationTCPPackets(p *packet.Packet) (err error) {
 	default:
 		context, conn, err = d.appRetrieveState(p)
 		if err != nil {
-			zap.L().Debug("Packet rejected",
-				zap.String("flow", p.L4FlowHash()),
-				zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
-				zap.Error(err),
-			)
+			if log.Trace {
+				zap.L().Debug("Packet rejected",
+					zap.String("flow", p.L4FlowHash()),
+					zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
+					zap.Error(err),
+				)
+			}
 			return err
 		}
 	}
@@ -202,11 +221,13 @@ func (d *Datapath) processApplicationTCPPackets(p *packet.Packet) (err error) {
 	// Match the tags of the packet against the policy rules - drop if the lookup fails
 	action, err := d.processApplicationTCPPacket(p, context, conn)
 	if err != nil {
-		zap.L().Debug("Dropping packet  ",
-			zap.String("flow", p.L4FlowHash()),
-			zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
-			zap.Error(err),
-		)
+		if log.Trace {
+			zap.L().Debug("Dropping packet  ",
+				zap.String("flow", p.L4FlowHash()),
+				zap.String("Flags", packet.TCPFlagsToStr(p.TCPFlags)),
+				zap.Error(err),
+			)
+		}
 		p.Print(packet.PacketFailureAuth)
 		return fmt.Errorf("Processing failed for application packet: %s", err.Error())
 	}
@@ -830,9 +851,11 @@ func (d *Datapath) appRetrieveState(p *packet.Packet) (*PUContext, *TCPConnectio
 			if d.mode != constants.RemoteContainer {
 				//We see a syn ack for which we have not recorded a syn
 				//Update the port for the context matching the mark this packet has comes with
-				context, _ := d.contextFromIP(true, p.SourceAddress.String(), p.Mark, strconv.Itoa(int(p.SourcePort)))
+				context, err := d.contextFromIP(true, p.SourceAddress.String(), p.Mark, strconv.Itoa(int(p.SourcePort)))
 
-				d.puFromPort.AddOrUpdate(strconv.Itoa(int(p.SourcePort)), context)
+				if err == nil {
+					d.puFromPort.AddOrUpdate(strconv.Itoa(int(p.SourcePort)), context)
+				}
 				//Return an error still we will process the syn successfully on retry and
 			}
 			return nil, nil, fmt.Errorf("App state not found")
@@ -896,9 +919,11 @@ func (d *Datapath) netSynAckRetrieveState(p *packet.Packet) (*PUContext, *TCPCon
 
 	conn, err := d.sourcePortConnectionCache.GetReset(p.SourcePortHash(packet.PacketTypeNetwork), 0)
 	if err != nil {
-		zap.L().Debug("No connection for SynAck packet ",
-			zap.String("flow", p.L4FlowHash()),
-		)
+		if log.Trace {
+			zap.L().Debug("No connection for SynAck packet ",
+				zap.String("flow", p.L4FlowHash()),
+			)
+		}
 		return nil, nil, fmt.Errorf("No Synack Connection")
 	}
 
