@@ -824,27 +824,12 @@ func (i *Instance) setGlobalRules(appChain, netChain string) error {
 		return fmt.Errorf("Failed to add capture SynAck rule for table %s, chain %s, with error: %s", i.appAckPacketIPTableContext, i.appPacketIPTableSection, err.Error())
 	}
 
-	//Temporary Log Some packets
-	// err = i.ipt.Insert(
-	// 	i.appAckPacketIPTableContext,
-	// 	appChain, 1,
-	// 	"-m", "set", "--match-set", targetNetworkSet, "dst",
-	// 	"-p", "tcp", "--tcp-flags", "SYN,ACK", "SYN,ACK",
-	// 	"-j", "LOG")
-	// if err != nil {
-	// 	return fmt.Errorf("Failed to add capture SynAck rule for table %s, chain %s, with error: %s", i.appAckPacketIPTableContext, i.appPacketIPTableSection, err.Error())
-	// }
-
-	//Temporary Log Some packets
-	err = i.ipt.Insert(
-		i.netPacketIPTableContext,
-		netChain, 1,
-		"-m", "set", "--match-set", targetNetworkSet, "src",
-		"-p", "tcp", "--tcp-flags", "SYN,ACK", "SYN,ACK",
-		"-j", "NFQUEUE", "--queue-bypass", "--queue-balance", i.fqc.GetNetworkQueueSynAckStr())
-
+	err = i.ipt.Insert(i.appAckPacketIPTableContext,
+		i.appPacketIPTableSection,
+		1,
+		"-j", uidchain)
 	if err != nil {
-		return fmt.Errorf("Failed to add capture SynAck rule for table %s, chain %s, with error: %s", i.appAckPacketIPTableContext, i.appPacketIPTableSection, err.Error())
+		zap.L().Error("ERROR", zap.Error(err))
 	}
 
 	err = i.ipt.Insert(
@@ -857,6 +842,55 @@ func (i *Instance) setGlobalRules(appChain, netChain string) error {
 		return fmt.Errorf("Failed to add default allow for marked packets at app ")
 	}
 
+	err = i.ipt.Insert(i.appAckPacketIPTableContext,
+		outputELBChain,
+		1,
+		"-m", "mark",
+		"--mark", proxyMark,
+		"-j", "ACCEPT")
+	if err != nil {
+		zap.L().Error("ERROR", zap.Error(err))
+	}
+
+	err = i.ipt.Insert(i.appAckPacketIPTableContext,
+		outputELBChain,
+		1,
+		"-p", "tcp",
+		"--sport", proxyport,
+		"-j", "ACCEPT")
+	if err != nil {
+		zap.L().Error("ERROR", zap.Error(err))
+	}
+	err = i.ipt.Insert(i.appAckPacketIPTableContext,
+		outputELBChain,
+		1,
+		"-p", "tcp",
+		"--dport", proxyport,
+		"-j", "ACCEPT")
+	if err != nil {
+		zap.L().Error("ERROR", zap.Error(err))
+	}
+
+	err = i.ipt.Insert(i.appAckPacketIPTableContext,
+		ipTableSectionOutput,
+		1,
+		"-j", outputELBChain)
+	if err != nil {
+		zap.L().Error("ERROR", zap.Error(err))
+	}
+
+	//Network Chain Rules
+	err = i.ipt.Insert(
+		i.netPacketIPTableContext,
+		netChain, 1,
+		"-m", "set", "--match-set", targetNetworkSet, "src",
+		"-p", "tcp", "--tcp-flags", "SYN,ACK", "SYN,ACK",
+		"-j", "NFQUEUE", "--queue-bypass", "--queue-balance", i.fqc.GetNetworkQueueSynAckStr())
+
+	if err != nil {
+		return fmt.Errorf("Failed to add capture SynAck rule for table %s, chain %s, with error: %s", i.appAckPacketIPTableContext, i.appPacketIPTableSection, err.Error())
+	}
+
 	err = i.ipt.Insert(
 		i.netPacketIPTableContext,
 		netChain, 1,
@@ -866,10 +900,31 @@ func (i *Instance) setGlobalRules(appChain, netChain string) error {
 	if err != nil {
 		return fmt.Errorf("Failed to add default allow for marked packets at net")
 	}
+
 	err = i.ipt.Insert(i.appAckPacketIPTableContext,
-		i.appPacketIPTableSection,
+		inputELBChain,
 		1,
-		"-j", uidchain)
+		"-m", "mark",
+		"--mark", proxyMark,
+		"-j", "ACCEPT")
+	if err != nil {
+		zap.L().Error("ERROR", zap.Error(err))
+	}
+	err = i.ipt.Insert(i.appAckPacketIPTableContext,
+		inputELBChain,
+		1,
+		"-p", "tcp",
+		"--sport", proxyport,
+		"-j", "ACCEPT")
+	if err != nil {
+		zap.L().Error("ERROR", zap.Error(err))
+	}
+	err = i.ipt.Insert(i.appAckPacketIPTableContext,
+		inputELBChain,
+		1,
+		"-p", "tcp",
+		"--dport", proxyport,
+		"-j", "ACCEPT")
 	if err != nil {
 		zap.L().Error("ERROR", zap.Error(err))
 	}
@@ -880,72 +935,6 @@ func (i *Instance) setGlobalRules(appChain, netChain string) error {
 		// "-m", "set",
 		// "--match-set", ELBIPSetPIP, "src",
 		"-j", inputELBChain)
-	if err != nil {
-		zap.L().Error("ERROR", zap.Error(err))
-	}
-	err = i.ipt.Insert(i.appAckPacketIPTableContext,
-		ipTableSectionOutput,
-		1,
-		// "-m", "set",
-		// "--match-set", ELBIPSetVIP, "dst",
-		"-j", outputELBChain)
-	if err != nil {
-		zap.L().Error("ERROR", zap.Error(err))
-	}
-	err = i.ipt.Insert(i.appAckPacketIPTableContext,
-		inputELBChain,
-		1,
-		"-m", "mark",
-		"--mark", proxyMark,
-		"-j", "ACCEPT")
-	if err != nil {
-		zap.L().Error("ERROR", zap.Error(err))
-	}
-
-	err = i.ipt.Insert(i.appAckPacketIPTableContext,
-		outputELBChain,
-		1,
-		"-m", "mark",
-		"--mark", proxyMark,
-		"-j", "ACCEPT")
-	if err != nil {
-		zap.L().Error("ERROR", zap.Error(err))
-	}
-
-	//Temporary Remove during cleanup
-	err = i.ipt.Insert(i.appAckPacketIPTableContext,
-		outputELBChain,
-		1,
-		"-p", "tcp",
-		"--sport", proxyport,
-		"-j", "ACCEPT")
-	if err != nil {
-		zap.L().Error("ERROR", zap.Error(err))
-	}
-	err = i.ipt.Insert(i.appAckPacketIPTableContext,
-		outputELBChain,
-		1,
-		"-p", "tcp",
-		"--dport", proxyport,
-		"-j", "ACCEPT")
-	if err != nil {
-		zap.L().Error("ERROR", zap.Error(err))
-	}
-	err = i.ipt.Insert(i.appAckPacketIPTableContext,
-		inputELBChain,
-		1,
-		"-p", "tcp",
-		"--sport", proxyport,
-		"-j", "ACCEPT")
-	if err != nil {
-		zap.L().Error("ERROR", zap.Error(err))
-	}
-	err = i.ipt.Insert(i.appAckPacketIPTableContext,
-		inputELBChain,
-		1,
-		"-p", "tcp",
-		"--dport", proxyport,
-		"-j", "ACCEPT")
 	if err != nil {
 		zap.L().Error("ERROR", zap.Error(err))
 	}

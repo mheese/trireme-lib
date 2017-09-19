@@ -355,7 +355,6 @@ func (i *Instance) SetTargetNetworks(current, networks []string) error {
 		return fmt.Errorf("Failed to update synack networks")
 	}
 
-	//	i.ipt.Insert(i.appAckPacketIPTableContext, uidchain, 1, "-j", "RETURN")
 	return nil
 }
 
