@@ -283,7 +283,7 @@ func (d *Datapath) processApplicationSynPacket(tcpPacket *packet.Packet, context
 		context.Unlock()
 		d.appOrigConnectionTracker.AddOrUpdate(tcpPacket.L4FlowHash(), conn)
 		d.sourcePortConnectionCache.AddOrUpdate(tcpPacket.SourcePortHash(packet.PacketTypeApplication), conn)
-		context.externalIPCache.SetTimeOut(aclCacheKey, time.Second*3) //nolint
+		context.externalIPCache.SetTimeOut(aclCacheKey, ExternalServiceResponseTimeOut) //nolint
 		return policy, nil
 	}
 	context.Unlock()
@@ -558,7 +558,7 @@ func (d *Datapath) processNetworkSynAckPacket(context *PUContext, conn *TCPConne
 		var plc *policy.FlowPolicy
 
 		flowHash := tcpPacket.SourceAddress.String() + ":" + strconv.Itoa(int(tcpPacket.SourcePort))
-		if plci, perr := context.externalIPCache.GetReset(flowHash, time.Second*600); perr == nil {
+		if plci, perr := context.externalIPCache.GetReset(flowHash, DefaultExternalIPTimeout); perr == nil {
 			plc = plci.(*policy.FlowPolicy)
 			d.releaseFlow(context, plc, tcpPacket)
 			return plc, nil, nil
