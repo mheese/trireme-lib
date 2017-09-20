@@ -278,10 +278,12 @@ func (d *Datapath) processApplicationSynPacket(tcpPacket *packet.Packet, context
 
 	// if destination is in the cache, allow
 	context.Lock()
-	if policy, err := context.externalIPCache.Get(tcpPacket.DestinationAddress.String() + ":" + strconv.Itoa(int(tcpPacket.DestinationPort))); err == nil {
+	aclCacheKey := tcpPacket.DestinationAddress.String() + ":" + strconv.Itoa(int(tcpPacket.DestinationPort))
+	if policy, err := context.externalIPCache.Get(aclCacheKey); err == nil {
 		context.Unlock()
 		d.appOrigConnectionTracker.AddOrUpdate(tcpPacket.L4FlowHash(), conn)
 		d.sourcePortConnectionCache.AddOrUpdate(tcpPacket.SourcePortHash(packet.PacketTypeApplication), conn)
+		context.externalIPCache.SetTimeOut(aclCacheKey, time.Second*3) //nolint
 		return policy, nil
 	}
 	context.Unlock()
@@ -556,7 +558,7 @@ func (d *Datapath) processNetworkSynAckPacket(context *PUContext, conn *TCPConne
 		var plc *policy.FlowPolicy
 
 		flowHash := tcpPacket.SourceAddress.String() + ":" + strconv.Itoa(int(tcpPacket.SourcePort))
-		if plci, perr := context.externalIPCache.Get(flowHash); perr == nil {
+		if plci, perr := context.externalIPCache.GetReset(flowHash, time.Second*600); perr == nil {
 			plc = plci.(*policy.FlowPolicy)
 			d.releaseFlow(context, plc, tcpPacket)
 			return plc, nil, nil

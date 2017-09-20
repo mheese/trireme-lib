@@ -22,7 +22,7 @@ import (
 )
 
 // DefaultExternalIPTimeout is the default used for the cache for External IPTimeout.
-const DefaultExternalIPTimeout = "500ms"
+const DefaultExternalIPTimeout = "10m"
 
 // Datapath is the structure holding all information about a connection filter
 type Datapath struct {
