@@ -229,10 +229,6 @@ func NewDefaultProxyEnforcer(serverID string,
 
 	mutualAuthorization := false
 	fqConfig := fqconfig.NewFilterQueueWithDefaults()
-	defaultExternalIPCacheTimeout, err := time.ParseDuration(enforcer.DefaultExternalIPTimeout)
-	if err != nil {
-		defaultExternalIPCacheTimeout = time.Second
-	}
 
 	validity := time.Hour * 8760
 	return NewProxyEnforcer(
@@ -246,7 +242,7 @@ func NewDefaultProxyEnforcer(serverID string,
 		rpchdl,
 		constants.DefaultRemoteArg,
 		procMountPoint,
-		defaultExternalIPCacheTimeout,
+		enforcer.DefaultExternalIPTimeout,
 	)
 }
 
