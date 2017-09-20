@@ -21,6 +21,8 @@ type DataStore interface {
 	Remove(u interface{}) (err error)
 	LockedModify(u interface{}, add func(a, b interface{}) interface{}, increment interface{}) (interface{}, error)
 	SetTimeOut(u interface{}, timeout time.Duration) (err error)
+	ResetTimestamp(u interface{}) error
+	SetTimeoutIfOlder(u interface{}, resetInterval, age time.Duration) error
 }
 
 // Cache is the structure that involves the map of entries. The cache
@@ -294,5 +296,41 @@ func (c *Cache) LockedModify(u interface{}, add func(a, b interface{}) interface
 	c.data[u] = e
 
 	return e.value, nil
+}
 
+// ResetTimestamp resets the timestamp of an entry
+func (c *Cache) ResetTimestamp(u interface{}) error {
+	c.Lock()
+	defer c.Unlock()
+
+	e, ok := c.data[u]
+	if !ok {
+		return fmt.Errorf("Reset item not found")
+	}
+
+	e.timestamp = time.Now()
+
+	return nil
+}
+
+// SetTimeoutIfOlder will set the timeout to a new value if the last time that
+// the entry was updated is too old.
+func (c *Cache) SetTimeoutIfOlder(u interface{}, resetInterval, age time.Duration) error {
+	c.Lock()
+	defer c.Unlock()
+
+	e, ok := c.data[u]
+	if !ok {
+		return fmt.Errorf("Reset item not found")
+	}
+
+	if time.Now().Add(-age).After(e.timestamp) {
+		if _, ok := c.data[u]; !ok {
+			return fmt.Errorf("Reset item is deleted already")
+		}
+
+		c.data[u].timer.Reset(resetInterval)
+	}
+
+	return nil
 }
