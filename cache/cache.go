@@ -325,11 +325,16 @@ func (c *Cache) SetTimeoutIfOlder(u interface{}, resetInterval, age time.Duratio
 	}
 
 	if time.Now().Add(-age).After(e.timestamp) {
-		if _, ok := c.data[u]; !ok {
+		e, ok := c.data[u]
+		if !ok {
 			return fmt.Errorf("Reset item is deleted already")
 		}
 
-		c.data[u].timer.Reset(resetInterval)
+		e.timestamp = time.Now()
+
+		e.timer.Reset(resetInterval)
+
+		c.data[u] = e
 	}
 
 	return nil
