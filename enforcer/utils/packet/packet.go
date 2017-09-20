@@ -424,3 +424,9 @@ func (p *Packet) TCPOptionLength() int {
 func (p *Packet) TCPDataLength() int {
 	return len(p.tcpData)
 }
+
+// SetFIN sets the FIN flag of the packet
+func (p *Packet) SetFIN() {
+	p.TCPFlags |= (TCPRstMask | TCPFinMask)
+	p.Buffer[tcpFlagsOffsetPos] = p.TCPFlags
+}

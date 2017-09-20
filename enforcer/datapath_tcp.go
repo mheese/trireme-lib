@@ -15,7 +15,6 @@ import (
 	"github.com/aporeto-inc/trireme/enforcer/utils/packet"
 	"github.com/aporeto-inc/trireme/enforcer/utils/tokens"
 	"github.com/aporeto-inc/trireme/log"
-	"github.com/aporeto-inc/trireme/monitor/linuxmonitor/cgnetcls"
 	"github.com/aporeto-inc/trireme/policy"
 )
 
@@ -86,6 +85,10 @@ func (d *Datapath) processNetworkTCPPackets(p *packet.Packet) (err error) {
 			}
 			return err
 		}
+	}
+
+	if context == nil {
+		return nil
 	}
 
 	conn.Lock()
@@ -180,14 +183,15 @@ func (d *Datapath) processApplicationTCPPackets(p *packet.Packet) (err error) {
 				)
 			}
 
-			if p.Mark == strconv.Itoa(cgnetcls.Initialmarkval-1) {
-				//SYN ACK came through the global rule.
-				//This not from a process we are monitoring
-				//let his packet through
-				return nil
-			}
-
-			return err
+			return nil
+			// if p.Mark == strconv.Itoa(cgnetcls.Initialmarkval-1) {
+			// 	//SYN ACK came through the global rule.
+			// 	//This not from a process we are monitoring
+			// 	//let his packet through
+			// 	return nil
+			// }
+			//
+			// return err
 		}
 	default:
 		context, conn, err = d.appRetrieveState(p)
@@ -200,6 +204,10 @@ func (d *Datapath) processApplicationTCPPackets(p *packet.Packet) (err error) {
 				)
 			}
 			return err
+		}
+
+		if context == nil {
+			return nil
 		}
 	}
 
@@ -859,7 +867,17 @@ func (d *Datapath) appRetrieveState(p *packet.Packet) (*PUContext, *TCPConnectio
 					d.puFromPort.AddOrUpdate(strconv.Itoa(int(p.SourcePort)), context)
 				}
 				//Return an error still we will process the syn successfully on retry and
+				return nil, nil, fmt.Errorf("App state not found")
 			}
+
+			// for data packets of previous connections, we will just close them by starting a FIN sequence
+			// Applications will need to recover.
+			if p.TCPFlags&packet.TCPSynMask == 0 {
+				p.SetFIN()
+				p.UpdateTCPChecksum()
+				return nil, nil, nil
+			}
+
 			return nil, nil, fmt.Errorf("App state not found")
 		}
 		if uerr := updateTimer(d.appOrigConnectionTracker, hash, conn.(*TCPConnection)); uerr != nil {
@@ -948,6 +966,15 @@ func (d *Datapath) netRetrieveState(p *packet.Packet) (*PUContext, *TCPConnectio
 	if err != nil {
 		conn, err = d.netOrigConnectionTracker.GetReset(hash, 0)
 		if err != nil {
+			// for data packets of previous connections, we will just close them by starting a FIN sequence
+			// Applications will need to recover.
+
+			if p.TCPFlags&packet.TCPSynMask == 0 {
+				p.SetFIN()
+				p.UpdateTCPChecksum()
+				return nil, nil, nil
+			}
+
 			return nil, nil, fmt.Errorf("Net state not found")
 		}
 		if uerr := updateTimer(d.netOrigConnectionTracker, hash, conn.(*TCPConnection)); uerr != nil {
