@@ -21,14 +21,14 @@ const (
 	appChainPrefix            = chainPrefix + "App-"
 	netChainPrefix            = chainPrefix + "Net-"
 	targetNetworkSet          = "TargetNetSet"
-	ELBIPSetVIP               = "ELBIPs-VIPs"
-	ELBIPSetPIP               = "ELBIPs-PIPs"
+	L4ServiceIPSet            = "L4Service-VIPs"
+	L4ServicePrivateIP        = "L4Service-PIPs"
 	ipTableSectionOutput      = "OUTPUT"
 	ipTableSectionInput       = "INPUT"
 	ipTableSectionPreRouting  = "PREROUTING"
 	ipTableSectionPostRouting = "POSTROUTING"
-	outputELBChain            = "ELB-App"
-	inputELBChain             = "ELB-Net"
+	outputELBChain            = "L4Service-App"
+	inputELBChain             = "L4Service-Net"
 	proxyport                 = "5000"
 	proxyMark                 = "0x40"
 	proxyMarkInt              = 0x40
@@ -335,14 +335,14 @@ func (i *Instance) SetTargetNetworks(current, networks []string) error {
 	if err := i.createTargetSet(networks); err != nil {
 		return err
 	}
-	ips, ipserr := i.ipset.NewIpset(ELBIPSetVIP, "hash:ip", &ipset.Params{})
+	ips, ipserr := i.ipset.NewIpset(L4ServiceIPSet, "hash:ip", &ipset.Params{})
 	if ipserr != nil {
 		zap.L().Error("creating elb ipset", zap.Error(ipserr))
 	}
 
 	ipserr = ips.Add("192.168.33.10", 0)
 
-	ipspip, ipserr := i.ipset.NewIpset(ELBIPSetPIP, "hash:ip", &ipset.Params{})
+	ipspip, ipserr := i.ipset.NewIpset(L4ServicePrivateIP, "hash:ip", &ipset.Params{})
 	if ipserr != nil {
 		zap.L().Error("creating elb ipset", zap.Error(ipserr))
 	}

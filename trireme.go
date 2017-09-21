@@ -50,14 +50,12 @@ func (t *trireme) Start() error {
 			zap.L().Error("Error when starting the supervisor", zap.Error(err)) // really? just a warn?
 		}
 	}
-
 	// Start all the enforcers
 	for _, e := range t.enforcers {
 		if err := e.Start(); err != nil {
 			return fmt.Errorf("Error while starting the enforcer: %s", err)
 		}
 	}
-
 	return nil
 }
 
