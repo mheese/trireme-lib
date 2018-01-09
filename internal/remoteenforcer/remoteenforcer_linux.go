@@ -34,6 +34,7 @@ import (
 	"github.com/aporeto-inc/trireme-lib/internal/remoteenforcer/internal/statscollector"
 	"github.com/aporeto-inc/trireme-lib/internal/supervisor"
 	"github.com/aporeto-inc/trireme-lib/policy"
+	"github.com/aporeto-inc/trireme-lib/utils/cgnetcls"
 )
 
 var cmdLock sync.Mutex
@@ -130,7 +131,7 @@ func (s *RemoteEnforcer) setupEnforcer(req rpcwrapper.Request) (err error) {
 		s.secrets,
 		payload.ServerID,
 		payload.Validity,
-		constants.RemoteContainer,
+		constants.LocalServer,
 		s.procMountPoint,
 		payload.ExternalIPCacheTimeout,
 		payload.PacketLogs,
@@ -231,7 +232,7 @@ func (s *RemoteEnforcer) InitSupervisor(req rpcwrapper.Request, resp *rpcwrapper
 			supervisorHandle, err := supervisor.NewSupervisor(
 				s.collector,
 				s.enforcer,
-				constants.RemoteContainer,
+				constants.LocalServer,
 				constants.IPTables,
 				payload.TriremeNetworks,
 			)
@@ -286,7 +287,15 @@ func (s *RemoteEnforcer) Supervise(req rpcwrapper.Request, resp *rpcwrapper.Resp
 		payload.ExcludedNetworks,
 		payload.ProxiedServices)
 
-	runtime := policy.NewPURuntimeWithDefaults()
+	options := &policy.OptionsType{
+		CgroupName: "1",
+		CgroupMark: strconv.FormatUint(cgnetcls.MarkVal(), 10),
+		UserID:     "1337",
+		Services:   []policy.Service{},
+		ProxyPort:  "65000",
+	}
+
+	runtime := policy.NewPURuntime("", 0, "", nil, nil, constants.UIDLoginPU, options)
 
 	puInfo := policy.PUInfoFromPolicyAndRuntime(payload.ContextID, pupolicy, runtime)
 
