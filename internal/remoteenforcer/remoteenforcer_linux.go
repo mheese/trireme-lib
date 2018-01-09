@@ -288,16 +288,16 @@ func (s *RemoteEnforcer) Supervise(req rpcwrapper.Request, resp *rpcwrapper.Resp
 		payload.ExcludedNetworks,
 		payload.ProxiedServices)
 
-	ports, err  := portspec.NewPortSpec(1, 65000, value)
-	if err != nil{
+	ports, serr := portspec.NewPortSpec(1, 65000, nil)
+	if serr != nil {
 		fmt.Println("Error in port spec ")
 	}
 
-  allServices := []policy.Service{
+	allServices := []policy.Service{
 		policy.Service{
-			Ports: ports,
+			Ports:    ports,
 			Protocol: 6,
-		}
+		},
 	}
 	options := &policy.OptionsType{
 		CgroupName: "1",
