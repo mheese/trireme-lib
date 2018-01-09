@@ -35,6 +35,7 @@ import (
 	"github.com/aporeto-inc/trireme-lib/internal/supervisor"
 	"github.com/aporeto-inc/trireme-lib/policy"
 	"github.com/aporeto-inc/trireme-lib/utils/cgnetcls"
+	"github.com/aporeto-inc/trireme-lib/utils/portspec"
 )
 
 var cmdLock sync.Mutex
@@ -287,11 +288,22 @@ func (s *RemoteEnforcer) Supervise(req rpcwrapper.Request, resp *rpcwrapper.Resp
 		payload.ExcludedNetworks,
 		payload.ProxiedServices)
 
+	ports, err  := portspec.NewPortSpec(1, 65000, value)
+	if err != nil{
+		fmt.Println("Error in port spec ")
+	}
+
+  allServices := []policy.Service{
+		policy.Service{
+			Ports: ports,
+			Protocol: 6,
+		}
+	}
 	options := &policy.OptionsType{
 		CgroupName: "1",
 		CgroupMark: strconv.FormatUint(cgnetcls.MarkVal(), 10),
 		UserID:     "1337",
-		Services:   []policy.Service{},
+		Services:   allServices,
 		ProxyPort:  "65000",
 	}
 
