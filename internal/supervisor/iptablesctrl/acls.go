@@ -164,6 +164,7 @@ func (i *Instance) chainRules(appChain string, netChain string, ip string, port 
 	rules = append(rules, []string{
 		i.netPacketIPTableContext,
 		i.netPacketIPTableSection,
+		"!", "-i", "lo",
 		"-d", ip,
 		"-m", "comment", "--comment", "Container-specific-chain",
 		"-j", netChain,
