@@ -1096,20 +1096,22 @@ func (i *Instance) setGlobalRules(appChain, netChain string) error {
 	}
 
 	// HACK: to prove working
-	err = i.ipt.Insert(i.appAckPacketIPTableContext,
-		i.appPacketIPTableSection, 1, "-m", "owner", "!", "--uid-owner", "1337", "-j", "ACCEPT")
+	if i.mode != constants.LocalServer {
+		err = i.ipt.Insert(i.appAckPacketIPTableContext,
+			i.appPacketIPTableSection, 1, "-m", "owner", "!", "--uid-owner", "1337", "-j", "ACCEPT")
 
-	if err != nil {
-		return fmt.Errorf("unable to set onwer rule in app section %s", err)
+		if err != nil {
+			return fmt.Errorf("unable to set onwer rule in app section %s", err)
+		}
+
+		err = i.ipt.Insert(i.appAckPacketIPTableContext,
+			i.appPacketIPTableSection, 1, "-m", "owner", "!", "--uid-owner", "1337", "-j", "MARK", "--set-mark", "61166")
+
+		if err != nil {
+			return fmt.Errorf("unable to set onwer rule in app section %s", err)
+		}
+
 	}
-
-	err = i.ipt.Insert(i.appAckPacketIPTableContext,
-		i.appPacketIPTableSection, 1, "-m", "owner", "!", "--uid-owner", "1337", "-j", "MARK", "--set-mark", "61166")
-
-	if err != nil {
-		return fmt.Errorf("unable to set onwer rule in app section %s", err)
-	}
-
 	return nil
 }
 
