@@ -1094,6 +1094,21 @@ func (i *Instance) setGlobalRules(appChain, netChain string) error {
 		return fmt.Errorf("unable to add proxy output chain: %s", err)
 	}
 
+	// HACK: to prove working
+	err = i.ipt.Insert(i.appAckPacketIPTableContext,
+		i.appPacketIPTableSection, 1, "-m", "owner", "!", "--uid-owner", "1337", "-j", "ACCEPT")
+
+	if err != nil {
+		return fmt.Errorf("unable to set onwer rule in app section %s", err)
+	}
+
+	err = i.ipt.Insert(i.appAckPacketIPTableContext,
+		i.appPacketIPTableSection, 1, "-m", "owner", "!", "--uid-owner", "1337", "-j", "MARK", "--set-mark", "61166")
+
+	if err != nil {
+		return fmt.Errorf("unable to set onwer rule in app section %s", err)
+	}
+
 	return nil
 }
 
