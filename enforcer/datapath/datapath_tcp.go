@@ -8,6 +8,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/aporeto-inc/netlink-go/common"
 	"github.com/aporeto-inc/trireme-lib/collector"
 	"github.com/aporeto-inc/trireme-lib/constants"
 	"github.com/aporeto-inc/trireme-lib/enforcer/connection"
@@ -312,19 +313,24 @@ func (d *Datapath) processApplicationSynAckPacket(tcpPacket *packet.Packet, cont
 	// We can also clean up the state since we are not going to see any more
 	// packets from this connection.
 	if conn.GetState() == connection.TCPData && !conn.ServiceConnection {
-		if err := d.conntrackHdl.ConntrackTableUpdateMark(
-			tcpPacket.DestinationAddress.String(),
-			tcpPacket.SourceAddress.String(),
-			tcpPacket.IPProto,
-			tcpPacket.DestinationPort,
-			tcpPacket.SourcePort,
-			constants.DefaultConnMark,
-		); err != nil {
-			zap.L().Error("Failed to update conntrack entry for flow",
-				zap.String("context", string(conn.Auth.LocalContext)),
-				zap.String("app-conn", tcpPacket.L4ReverseFlowHash()),
-				zap.String("state", fmt.Sprintf("%d", conn.GetState())),
-			)
+		if table, err := d.conntrackHdl.ConntrackTableList(common.ConntrackTable); err == nil {
+
+			if _, err := d.conntrackHdl.ConntrackTableUpdateMarkForAvailableFlow(table,
+				tcpPacket.DestinationAddress.String(),
+				tcpPacket.SourceAddress.String(),
+				tcpPacket.IPProto,
+				0,
+				tcpPacket.SourcePort,
+				constants.DefaultConnMark,
+			); err != nil {
+				zap.L().Error("Failed to update conntrack entry for flow",
+					zap.String("context", string(conn.Auth.LocalContext)),
+					zap.String("app-conn", tcpPacket.L4ReverseFlowHash()),
+					zap.String("state", fmt.Sprintf("%d", conn.GetState())),
+				)
+			}
+		} else {
+			fmt.Println("Failed to read the conntrack table")
 		}
 
 		err1 := d.netOrigConnectionTracker.Remove(tcpPacket.L4ReverseFlowHash())
