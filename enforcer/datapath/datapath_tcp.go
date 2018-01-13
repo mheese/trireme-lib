@@ -325,7 +325,7 @@ func (d *Datapath) processApplicationSynAckPacket(tcpPacket *packet.Packet, cont
 	// We can also clean up the state since we are not going to see any more
 	// packets from this connection.
 	if conn.GetState() == connection.TCPData && !conn.ServiceConnection {
-		cmd := "conntrack -U -p tcp --sport " + strconv.Itoa(int(tcpPacket.DestinationPort)) + " -d " + tcpPacket.SourceAddress.String() + " -s " + tcpPacket.DestinationAddress.String()
+		cmd := "conntrack -U -p tcp --sport " + strconv.Itoa(int(tcpPacket.DestinationPort)) + " -d " + tcpPacket.SourceAddress.String() + " -s " + tcpPacket.DestinationAddress.String() + " --mark " + strconv.Itoa(int(constants.DefaultConnMark))
 		if _, err := execConntrack(cmd); err != nil {
 			zap.L().Error("FAILED in conntrack", zap.Error(err), zap.String("command", cmd))
 		}
