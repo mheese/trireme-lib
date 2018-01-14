@@ -1011,16 +1011,16 @@ func (i *Instance) setGlobalRules(appChain, netChain string) error {
 		return fmt.Errorf("unable to add default allow for marked packets at net: %s", err)
 	}
 
-	err = i.ipt.Insert(
-		i.netPacketIPTableContext,
-		netChain, 1,
-		"-m", "set", "--match-set", targetNetworkSet, "src",
-		"-p", "tcp", "--tcp-flags", "SYN,ACK", "SYN", "--tcp-option",
-		"34", "-j", "NFQUEUE", "--queue-bypass", "--queue-balance", i.fqc.GetNetworkQueueSynStr())
-
-	if err != nil {
-		return fmt.Errorf("unable to add capture syn rule for table %s, chain %s: %s", i.appAckPacketIPTableContext, i.appPacketIPTableSection, err)
-	}
+	// err = i.ipt.Insert(
+	// 	i.netPacketIPTableContext,
+	// 	netChain, 1,
+	// 	"-m", "set", "--match-set", targetNetworkSet, "src",
+	// 	"-p", "tcp", "--tcp-flags", "SYN,ACK", "SYN", "--tcp-option",
+	// 	"34", "-j", "NFQUEUE", "--queue-bypass", "--queue-balance", i.fqc.GetNetworkQueueSynStr())
+	//
+	// if err != nil {
+	// 	return fmt.Errorf("unable to add capture syn rule for table %s, chain %s: %s", i.appAckPacketIPTableContext, i.appPacketIPTableSection, err)
+	// }
 
 	err = i.ipt.Insert(
 		i.netPacketIPTableContext,
