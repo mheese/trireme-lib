@@ -171,12 +171,19 @@ func (i *Instance) ConfigureRules(version int, contextID string, containerInfo *
 	}
 
 	proxyPort := containerInfo.Runtime.Options().ProxyPort
-	zap.L().Debug("Configure rules", zap.String("proxyPort", proxyPort))
+
 	proxiedServices := containerInfo.Policy.ProxiedServices()
 
 	// Configure all the ACLs
 	if err = i.addContainerChain(appChain, netChain); err != nil {
 		return err
+	}
+
+	// Adding sidecar rule to only use UID traffic on output
+	if uid := containerInfo.Policy.SidecarUID(); uid != "" {
+		if err := i.includeOnlyUID(uid); err != nil {
+			return err
+		}
 	}
 
 	if i.mode != constants.LocalServer {

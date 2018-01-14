@@ -74,6 +74,7 @@ type EnforcePayload struct {
 	TriremeNetworks  []string                    `json:",omitempty"`
 	ExcludedNetworks []string                    `json:",omitempty"`
 	ProxiedServices  *policy.ProxiedServicesInfo `json:",omitempty"`
+	SidecarUID       string                      `json:",omitempty"`
 	SecretType       secrets.PrivateSecretsType  `json:",omitempty"`
 	CAPEM            []byte                      `json:",omitempty"`
 	TokenKeyPEMs     [][]byte                    `json:",omitempty"`
@@ -97,6 +98,7 @@ type SuperviseRequestPayload struct {
 	ExcludedNetworks []string                    `json:",omitempty"`
 	TriremeNetworks  []string                    `json:",omitempty"`
 	ProxiedServices  *policy.ProxiedServicesInfo `json:",omitempty"`
+	SidecarUID       string                      `json:",omitempty"`
 }
 
 //UnEnforcePayload payload for unenforce request

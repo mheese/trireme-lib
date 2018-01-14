@@ -44,7 +44,7 @@ func DefaultHostMetadataExtractor(event *EventInfo) (*policy.PURuntime, error) {
 		return nil, fmt.Errorf("invalid pid: %s %s", event.PID, err)
 	}
 
-	return policy.NewPURuntime(event.Name, runtimePID, "", runtimeTags, runtimeIps, constants.LinuxProcessPU, options), nil
+	return policy.NewPURuntime(event.Name, runtimePID, "", runtimeTags, runtimeIps, constants.LinuxProcessPU, options, ""), nil
 }
 
 // SystemdEventMetadataExtractor is a systemd based metadata extractor
@@ -89,7 +89,7 @@ func SystemdEventMetadataExtractor(event *EventInfo) (*policy.PURuntime, error) 
 		return nil, fmt.Errorf("invalid pid: %s %s", event.PID, err)
 	}
 
-	return policy.NewPURuntime(event.Name, runtimePID, "", runtimeTags, runtimeIps, constants.LinuxProcessPU, &options), nil
+	return policy.NewPURuntime(event.Name, runtimePID, "", runtimeTags, runtimeIps, constants.LinuxProcessPU, &options, ""), nil
 }
 
 // ProcessInfo returns all metadata captured by a process

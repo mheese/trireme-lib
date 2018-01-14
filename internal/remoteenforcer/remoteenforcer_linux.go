@@ -284,7 +284,8 @@ func (s *RemoteEnforcer) Supervise(req rpcwrapper.Request, resp *rpcwrapper.Resp
 		payload.PolicyIPs,
 		payload.TriremeNetworks,
 		payload.ExcludedNetworks,
-		payload.ProxiedServices)
+		payload.ProxiedServices,
+		payload.SidecarUID)
 
 	runtime := policy.NewPURuntimeWithDefaults()
 
@@ -363,7 +364,9 @@ func (s *RemoteEnforcer) Enforce(req rpcwrapper.Request, resp *rpcwrapper.Respon
 		payload.PolicyIPs,
 		payload.TriremeNetworks,
 		payload.ExcludedNetworks,
-		payload.ProxiedServices)
+		payload.ProxiedServices,
+	  payload.SidecarUID,
+	)
 
 	runtime := policy.NewPURuntimeWithDefaults()
 	puInfo := policy.PUInfoFromPolicyAndRuntime(payload.ContextID, pupolicy, runtime)

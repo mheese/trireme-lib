@@ -25,6 +25,7 @@ func TestNewPURunTime(t *testing.T) {
 			ips,
 			constants.ContainerPU,
 			nil,
+			"",
 		)
 
 		So(runtime, ShouldNotBeNil)
@@ -67,6 +68,7 @@ func TestBasicFunctions(t *testing.T) {
 			ips,
 			constants.ContainerPU,
 			nil,
+			"",
 		)
 
 		Convey("When I clone it, I should get the right runtime", func() {

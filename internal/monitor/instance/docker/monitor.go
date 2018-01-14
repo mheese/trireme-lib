@@ -145,10 +145,10 @@ func defaultMetadataExtractor(info *types.ContainerJSON) (*policy.PURuntime, err
 	}
 
 	if info.HostConfig.NetworkMode == constants.DockerHostMode {
-		return policy.NewPURuntime(info.Name, info.State.Pid, "", tags, ipa, constants.LinuxProcessPU, hostModeOptions(info)), nil
+		return policy.NewPURuntime(info.Name, info.State.Pid, "", tags, ipa, constants.LinuxProcessPU, hostModeOptions(info), ""), nil
 	}
 
-	return policy.NewPURuntime(info.Name, info.State.Pid, "", tags, ipa, constants.ContainerPU, nil), nil
+	return policy.NewPURuntime(info.Name, info.State.Pid, "", tags, ipa, constants.ContainerPU, nil, ""), nil
 }
 
 // hostModeOptions creates the default options for a host-mode container. This is done

@@ -134,6 +134,7 @@ func (s *ProxyInfo) Enforce(contextID string, puInfo *policy.PUInfo) error {
 		TriremeNetworks:  puInfo.Policy.TriremeNetworks(),
 		ExcludedNetworks: puInfo.Policy.ExcludedNetworks(),
 		ProxiedServices:  puInfo.Policy.ProxiedServices(),
+		SidecarUID:       puInfo.Policy.SidecarUID(),
 	}
 	//Only the secrets need to be under lock. They can change async to the enforce call from Updatesecrets
 	s.RLock()

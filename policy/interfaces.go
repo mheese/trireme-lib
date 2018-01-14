@@ -37,4 +37,7 @@ type RuntimeReader interface {
 
 	// Returns the PUType for the PU
 	PUType() constants.PUType
+
+	// SidecarUID returns the Sidecar UID if it exists. Returns empty string otherwise
+	SidecarUID() string
 }

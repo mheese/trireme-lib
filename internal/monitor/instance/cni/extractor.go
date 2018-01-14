@@ -10,7 +10,7 @@ import (
 	"github.com/aporeto-inc/trireme-lib/rpc/events"
 )
 
-// KubernetesMetadataExtractor is a systemd based metadata extractor
+// KubernetesMetadataExtractor is a kubernetes based metadata extractor
 func KubernetesMetadataExtractor(event *events.EventInfo) (*policy.PURuntime, error) {
 
 	if event.NS == "" {
@@ -28,7 +28,7 @@ func KubernetesMetadataExtractor(event *events.EventInfo) (*policy.PURuntime, er
 
 	runtimeIps := policy.ExtendedMap{"bridge": "0.0.0.0/0"}
 
-	return policy.NewPURuntime(event.Name, 1, "", runtimeTags, runtimeIps, constants.LinuxProcessPU, nil), nil
+	return policy.NewPURuntime(event.Name, 1, "", runtimeTags, runtimeIps, constants.LinuxProcessPU, nil, ""), nil
 }
 
 // DockerMetadataExtractor is a systemd based metadata extractor
@@ -49,5 +49,5 @@ func DockerMetadataExtractor(event *events.EventInfo) (*policy.PURuntime, error)
 
 	runtimeIps := policy.ExtendedMap{"bridge": "0.0.0.0/0"}
 
-	return policy.NewPURuntime(event.Name, 0, event.NS, runtimeTags, runtimeIps, constants.ContainerPU, nil), nil
+	return policy.NewPURuntime(event.Name, 0, event.NS, runtimeTags, runtimeIps, constants.ContainerPU, nil, ""), nil
 }

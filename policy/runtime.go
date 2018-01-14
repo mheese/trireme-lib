@@ -23,6 +23,8 @@ type PURuntime struct {
 	tags *TagStore
 	// options
 	options *OptionsType
+	// sidecarUID is the UID of a in-series sidecar
+	sidecarUID string
 
 	// GlobalLock is used by Trireme to make sure that two operations do not
 	// get interleaved for the same container.
@@ -50,7 +52,7 @@ type PURuntimeJSON struct {
 }
 
 // NewPURuntime Generate a new RuntimeInfo
-func NewPURuntime(name string, pid int, nsPath string, tags *TagStore, ips ExtendedMap, puType constants.PUType, options *OptionsType) *PURuntime {
+func NewPURuntime(name string, pid int, nsPath string, tags *TagStore, ips ExtendedMap, puType constants.PUType, options *OptionsType, sidecarUID string) *PURuntime {
 
 	t := tags
 	if t == nil {
@@ -75,13 +77,14 @@ func NewPURuntime(name string, pid int, nsPath string, tags *TagStore, ips Exten
 		nsPath:     nsPath,
 		name:       name,
 		GlobalLock: &sync.Mutex{},
+		sidecarUID: sidecarUID,
 	}
 }
 
 // NewPURuntimeWithDefaults sets up PURuntime with defaults
 func NewPURuntimeWithDefaults() *PURuntime {
 
-	return NewPURuntime("", 0, "", nil, nil, constants.ContainerPU, nil)
+	return NewPURuntime("", 0, "", nil, nil, constants.ContainerPU, nil, "")
 }
 
 // Clone returns a copy of the policy
@@ -89,7 +92,7 @@ func (r *PURuntime) Clone() *PURuntime {
 	r.Lock()
 	defer r.Unlock()
 
-	return NewPURuntime(r.name, r.pid, r.nsPath, r.tags.Copy(), r.ips.Copy(), r.puType, r.options)
+	return NewPURuntime(r.name, r.pid, r.nsPath, r.tags.Copy(), r.ips.Copy(), r.puType, r.options, r.sidecarUID)
 }
 
 // MarshalJSON Marshals this struct.
@@ -246,4 +249,12 @@ func (r *PURuntime) Options() OptionsType {
 	}
 
 	return *r.options
+}
+
+// SidecarUID returns the sidecar UID
+func (r *PURuntime) SidecarUID() string {
+	r.Lock()
+	defer r.Unlock()
+
+	return r.sidecarUID
 }

@@ -390,6 +390,20 @@ func (i *Instance) addPacketTrap(appChain string, netChain string, ip string, ne
 
 }
 
+func (i *Instance) includeOnlyUID(uid string) error {
+	// HACK: to prove working
+	if i.mode != constants.LocalServer {
+		err := i.ipt.Append(i.appAckPacketIPTableContext,
+			i.appPacketIPTableSection, "-m", "owner", "!", "--uid-owner", uid, "-j", "ACCEPT")
+
+		if err != nil {
+			return fmt.Errorf("unable to set onwer rule in app section %s", err)
+		}
+	}
+
+	return nil
+}
+
 // addAppACLs adds a set of rules to the external services that are initiated
 // by an application. The allow rules are inserted with highest priority.
 func (i *Instance) addAppACLs(contextID, chain, ip string, rules policy.IPRuleList) error {
@@ -1095,23 +1109,6 @@ func (i *Instance) setGlobalRules(appChain, netChain string) error {
 		return fmt.Errorf("unable to add proxy output chain: %s", err)
 	}
 
-	// HACK: to prove working
-	if i.mode != constants.LocalServer {
-		err = i.ipt.Insert(i.appAckPacketIPTableContext,
-			i.appPacketIPTableSection, 1, "-m", "owner", "!", "--uid-owner", "1337", "-j", "ACCEPT")
-
-		if err != nil {
-			return fmt.Errorf("unable to set onwer rule in app section %s", err)
-		}
-
-		err = i.ipt.Insert(i.appAckPacketIPTableContext,
-			i.appPacketIPTableSection, 1, "-m", "owner", "!", "--uid-owner", "1337", "-j", "MARK", "--set-mark", "61166")
-
-		if err != nil {
-			return fmt.Errorf("unable to set onwer rule in app section %s", err)
-		}
-
-	}
 	return nil
 }
 

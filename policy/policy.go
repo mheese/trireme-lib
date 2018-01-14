@@ -32,6 +32,9 @@ type PUPolicy struct {
 	excludedNetworks []string
 	//Proxied Services string format ip:port
 	proxiedServices *ProxiedServicesInfo
+	// sidecarUID is the UID of a sidecar inserted in the path
+	sidecarUID string
+
 	sync.Mutex
 }
 
@@ -61,6 +64,7 @@ func NewPUPolicy(
 	triremeNetworks []string,
 	excludedNetworks []string,
 	proxiedServices *ProxiedServicesInfo,
+	sidecarUID string,
 ) *PUPolicy {
 
 	if appACLs == nil {
@@ -103,12 +107,13 @@ func NewPUPolicy(
 		triremeNetworks:  triremeNetworks,
 		excludedNetworks: excludedNetworks,
 		proxiedServices:  proxiedServices,
+		sidecarUID:       sidecarUID,
 	}
 }
 
 // NewPUPolicyWithDefaults sets up a PU policy with defaults
 func NewPUPolicyWithDefaults() *PUPolicy {
-	return NewPUPolicy("", AllowAll, nil, nil, nil, nil, nil, nil, nil, []string{}, []string{}, &ProxiedServicesInfo{})
+	return NewPUPolicy("", AllowAll, nil, nil, nil, nil, nil, nil, nil, []string{}, []string{}, &ProxiedServicesInfo{}, "")
 }
 
 // Clone returns a copy of the policy
@@ -129,6 +134,7 @@ func (p *PUPolicy) Clone() *PUPolicy {
 		p.triremeNetworks,
 		p.excludedNetworks,
 		p.proxiedServices,
+		p.sidecarUID,
 	)
 
 	return np
@@ -300,4 +306,12 @@ func (p *PUPolicy) UpdateExcludedNetworks(networks []string) {
 	p.excludedNetworks = make([]string, len(networks))
 
 	copy(p.excludedNetworks, networks)
+}
+
+// SidecarUID returns the sidecar UID
+func (p *PUPolicy) SidecarUID() string {
+	p.Lock()
+	defer p.Unlock()
+
+	return p.sidecarUID
 }

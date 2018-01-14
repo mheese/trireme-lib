@@ -61,6 +61,7 @@ func (s *ProxyInfo) Supervise(contextID string, puInfo *policy.PUInfo) error {
 			ExcludedNetworks: puInfo.Policy.ExcludedNetworks(),
 			TriremeNetworks:  puInfo.Policy.TriremeNetworks(),
 			ProxiedServices:  puInfo.Policy.ProxiedServices(),
+			SidecarUID:       puInfo.Policy.SidecarUID(),
 		},
 	}
 
