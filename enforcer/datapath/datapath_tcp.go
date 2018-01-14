@@ -717,16 +717,21 @@ func (d *Datapath) processNetworkAckPacket(context *pucontext.PUContext, conn *c
 		conn.SetState(connection.TCPData)
 
 		if !conn.ServiceConnection {
-			if err := d.conntrackHdl.ConntrackTableUpdateMark(
-				tcpPacket.SourceAddress.String(),
-				tcpPacket.DestinationAddress.String(),
-				tcpPacket.IPProto,
-				tcpPacket.SourcePort,
-				tcpPacket.DestinationPort,
-				constants.DefaultConnMark,
-			); err != nil {
-				zap.L().Error("Failed to update conntrack table after ack packet")
+			cmd := "conntrack -U -p tcp --sport " + strconv.Itoa(int(tcpPacket.SourcePort)) + " -d " + tcpPacket.DestinationAddress.String() + " -s " + tcpPacket.SourceAddress.String() + " --mark " + strconv.Itoa(int(constants.DefaultConnMark))
+			if _, err := execConntrack(cmd); err != nil {
+				zap.L().Error("FAILED in conntrack after ack packet", zap.Error(err), zap.String("command", cmd))
 			}
+
+			// if err := d.conntrackHdl.ConntrackTableUpdateMark(
+			// 	tcpPacket.SourceAddress.String(),
+			// 	tcpPacket.DestinationAddress.String(),
+			// 	tcpPacket.IPProto,
+			// 	tcpPacket.SourcePort,
+			// 	tcpPacket.DestinationPort,
+			// 	constants.DefaultConnMark,
+			// ); err != nil {
+			// 	zap.L().Error("Failed to update conntrack table after ack packet")
+			// }
 		}
 
 		// Accept the packet
