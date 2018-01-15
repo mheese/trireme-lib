@@ -30,7 +30,7 @@ func TestNewInstance(t *testing.T) {
 			Convey("It should succeed", func() {
 				So(i, ShouldNotBeNil)
 				So(err, ShouldBeNil)
-				So(i.appPacketIPTableSection, ShouldResemble, "OUTPUT")
+				So(i.appPacketIPTableSection, ShouldResemble, "POSTROUTING")
 				So(i.netPacketIPTableSection, ShouldResemble, "INPUT")
 			})
 		})

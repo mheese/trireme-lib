@@ -28,7 +28,7 @@ const (
 	// PuPortSet The prefix for portset names
 	PuPortSet                 = "PUPort-"
 	proxyPortSet              = "Proxy-"
-	ipTableSectionOutput      = "OUTPUT"
+	ipTableSectionOutput      = "POSTROUTING"
 	ipTableSectionInput       = "INPUT"
 	ipTableSectionPreRouting  = "PREROUTING"
 	ipTableSectionPostRouting = "POSTROUTING"
