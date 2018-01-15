@@ -54,7 +54,7 @@ func NewInstance(fqc *fqconfig.FilterQueue, remote bool, mode constants.ModeType
 	}
 
 	if remote {
-		i.appPacketIPTableSection = "OUTPUT"
+		i.appPacketIPTableSection = "POSTROUTING"
 		i.netPacketIPTableSection = "INPUT"
 	} else {
 		i.appPacketIPTableSection = "PREROUTING"

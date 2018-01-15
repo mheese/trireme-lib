@@ -411,6 +411,12 @@ func (d *Datapath) processApplicationAckPacket(tcpPacket *packet.Packet, context
 		// will be transmitted through the kernel directly. Service connections are
 		// delegated to the service module
 		if !conn.ServiceConnection && tcpPacket.SourceAddress.String() != tcpPacket.DestinationAddress.String() {
+			fmt.Println("Processing conntrack on the APP packet ", tcpPacket.SourceAddress.String(),
+				tcpPacket.DestinationAddress.String(),
+				tcpPacket.IPProto,
+				tcpPacket.SourcePort,
+				tcpPacket.DestinationPort,
+				constants.DefaultConnMark)
 			if err := d.conntrackHdl.ConntrackTableUpdateMark(
 				tcpPacket.SourceAddress.String(),
 				tcpPacket.DestinationAddress.String(),
@@ -419,12 +425,15 @@ func (d *Datapath) processApplicationAckPacket(tcpPacket *packet.Packet, context
 				tcpPacket.DestinationPort,
 				constants.DefaultConnMark,
 			); err != nil {
+				fmt.Println("I FAILED TO UPDATE THE FLOW ")
 				zap.L().Error("Failed to update conntrack table for flow",
 					zap.String("context", string(conn.Auth.LocalContext)),
 					zap.String("app-conn", tcpPacket.L4ReverseFlowHash()),
 					zap.String("state", fmt.Sprintf("%d", conn.GetState())),
 				)
 			}
+
+			fmt.Println("I UPDATED THE FLOW ")
 		}
 
 		return nil, nil
