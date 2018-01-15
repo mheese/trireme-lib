@@ -29,6 +29,7 @@ const (
 	PuPortSet                 = "PUPort-"
 	proxyPortSet              = "Proxy-"
 	ipTableSectionOutput      = "POSTROUTING"
+	ipTableSectionNatOutput   = "OUTPUT"
 	ipTableSectionInput       = "INPUT"
 	ipTableSectionPreRouting  = "PREROUTING"
 	ipTableSectionPostRouting = "POSTROUTING"

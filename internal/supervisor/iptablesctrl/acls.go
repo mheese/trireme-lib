@@ -1035,7 +1035,7 @@ func (i *Instance) setGlobalRules(appChain, netChain string) error {
 	}
 
 	err = i.ipt.Insert(i.appProxyIPTableContext,
-		ipTableSectionOutput, 1,
+		ipTableSectionNatOutput, 1,
 		"-j", natProxyOutputChain)
 	if err != nil {
 		return fmt.Errorf("unable to add default allow for marked packets at net: %s", err)
