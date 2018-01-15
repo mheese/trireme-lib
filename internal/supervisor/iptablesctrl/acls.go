@@ -393,9 +393,10 @@ func (i *Instance) addPacketTrap(appChain string, netChain string, ip string, ne
 func (i *Instance) includeOnlyUID(uid string) error {
 	// HACK: to prove working
 	if i.mode != constants.LocalServer {
-		err := i.ipt.Append(i.appAckPacketIPTableContext,
-			i.appPacketIPTableSection, "-m", "owner", "!", "--uid-owner", uid, "-j", "ACCEPT")
-
+		// err := i.ipt.Append(i.appAckPacketIPTableContext,
+		//	i.appPacketIPTableSection, "-m", "owner", "!", "--uid-owner", uid, "-j", "ACCEPT")
+		err := i.ipt.Append(i.appAckPacketIPTableContext, i.appPacketIPTableSection,
+			"-o", "lo", "-j", "ACCEPT")
 		if err != nil {
 			return fmt.Errorf("unable to set onwer rule in app section %s", err)
 		}
