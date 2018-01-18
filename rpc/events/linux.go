@@ -62,6 +62,7 @@ func SystemdEventMetadataExtractor(event *EventInfo) (*policy.PURuntime, error) 
 
 	userdata := ProcessInfo(event.PID)
 
+	runtimeTags.AppendKeyValue("@sys:pid", event.PID)
 	for _, u := range userdata {
 		runtimeTags.AppendKeyValue("@sys:"+u, "true")
 	}
